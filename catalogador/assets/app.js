@@ -15,19 +15,28 @@ function zoom(){$('#photo').style.width=scale*100+'%';$('#photo').style.height=s
 $('#plus').onclick=()=>{scale=Math.min(5,scale+.25);zoom();};$('#minus').onclick=()=>{scale=Math.max(1,scale-.25);zoom();};$('#fit').onclick=()=>{scale=1;zoom();};
 function focusFirst(){setTimeout(()=>$('#fields input, #fields select, #fields textarea, #fields button')?.focus(),0);}
 function field(label,key,options){const wrap=el('label',label);let input;if(options){input=el('select','');input.add(new Option('Sin indicar',''));for(const v of options)input.add(new Option(v,v));if(RecordFields.definitions[key]?.options&&record[key]&&!options.includes(record[key]))input.add(new Option(record[key]+' (valor anterior)',record[key]));}else input=el(key==='notes'?'textarea':'input','');input.value=record[key]||'';input.oninput=()=>{record[key]=input.value;dirty=true;};wrap.append(input);$('#fields').append(wrap);return input;}
-function tags(key){let selected=record[key]||[];record[key]=selected;let box=el('div','');box.className='choices';for(const term of [...new Set([...(RecordFields.terms[key]||[]),...(db.terms[key]||[]),...selected])]){let label=el('label',''),input=el('input','');input.type='checkbox';input.checked=selected.includes(term);input.onchange=()=>{record[key]=input.checked?[...record[key],term]:record[key].filter(x=>x!==term);dirty=true;};label.append(input,document.createTextNode(term));box.append(label);}$('#fields').append(box);let row=el('div','');row.className='add-term';let input=el('input','');input.placeholder='Agregar término';input.setAttribute('aria-label','Nuevo término');let add=el('button','Agregar');add.type='button';const append=()=>{let t=input.value.trim();if(t&&!record[key].includes(t)){record[key].push(t);dirty=true;show();}};add.onclick=append;input.onkeydown=e=>{if(e.key==='Enter'&&input.value.trim()){e.preventDefault();e.stopPropagation();append();}};row.append(input,add);$('#fields').append(row);}
+function vocabularyValues(key){const shared=GithubStore.vocabulary;return [...new Set([...(key==='author'?shared.authors:shared.terms[key]||[]),...(key==='author'?db.authors||[]:RecordFields.terms[key]||[]),...(key==='author'?Object.values(db.images).map(i=>i.record?.author):db.terms[key]||[]),...(key==='author'?[record.author]:record[key]||[])].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));}
+function termPicker(key,multiple){
+ const wrap=el('div','');wrap.className='term-picker';const caption=el('label',RecordFields.definitions[key].label),input=el('input','');input.type='search';input.placeholder='Buscar o escribir un término nuevo';input.autocomplete='off';input.maxLength=300;caption.append(input);
+ const hint=el('small','Escribí para buscar · ↑ ↓ recorrer · Enter elegir · Tab salir · Enter sin búsqueda: avanzar');
+ const selected=el('div','');selected.className='term-selected';const list=el('div','');list.className='term-results';list.setAttribute('role','listbox');if(multiple)list.setAttribute('aria-multiselectable','true');list.id='terms-'+key;input.setAttribute('aria-controls',list.id);
+ const status=el('small','');status.setAttribute('aria-live','polite');let cursor=-1,values=[],creating=false;
+ const chosen=()=>multiple?record[key]||[]:record[key]?[record[key]]:[];
+ function choose(value){if(multiple)record[key]=chosen().includes(value)?chosen().filter(v=>v!==value):[...chosen(),value];else record[key]=record[key]===value?'':value;dirty=true;input.value='';cursor=-1;draw();input.focus();}
+ function draw(){const normal=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase();const query=input.value.trim();values=vocabularyValues(key).filter(v=>normal(v).includes(normal(query)));creating=!!query&&!vocabularyValues(key).some(v=>normal(v)===normal(query));if(creating)values.push(query);cursor=Math.min(cursor,values.length-1);
+  selected.replaceChildren();for(const value of chosen()){const button=el('button',value+' ×');button.type='button';button.tabIndex=-1;button.onclick=()=>choose(value);selected.append(button);}
+  list.replaceChildren();values.forEach((value,n)=>{const button=el('button',(chosen().includes(value)?'☑ ':'☐ ')+(creating&&n===values.length-1?'Agregar: ':'')+value);button.type='button';button.tabIndex=-1;button.id=list.id+'-'+n;button.setAttribute('role','option');button.setAttribute('aria-selected',String(chosen().includes(value)));button.classList.toggle('cursor',cursor===n);button.onclick=()=>choose(value);list.append(button);});
+  if(cursor>=0){input.setAttribute('aria-activedescendant',list.id+'-'+cursor);list.children[cursor]?.scrollIntoView({block:'nearest'});}else input.removeAttribute('aria-activedescendant');status.textContent=chosen().length+' seleccionados · '+values.length+' opciones';
+ }
+ input.oninput=()=>{cursor=-1;draw();};input.onkeydown=e=>{if(e.isComposing)return;if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();cursor=values.length?(cursor<0?(e.key==='ArrowDown'?0:values.length-1):(cursor+(e.key==='ArrowDown'?1:-1)+values.length)%values.length):-1;draw();}else if(e.key==='Enter'&&!e.ctrlKey&&(input.value.trim()||cursor>=0)){e.preventDefault();e.stopPropagation();if(values.length)choose(values[cursor>=0?cursor:0]);}};
+ wrap.append(caption,hint,selected,list,status);$('#fields').append(wrap);draw();return input;
+}
+function tags(key){if(!Array.isArray(record[key]))record[key]=[];termPicker(key,true);}
 function identifierFields(){
  const value=field('Identificador único','identifier');value.type='text';value.autocomplete='off';
 }
 
-function authorField(){
- const names=[...new Set([...(db.authors||[]),...Object.values(db.images).map(i=>i.record?.author),record.author].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
- const select=field('Autor / fotógrafo','author',names);
- const row=el('div','');row.className='add-term';const input=el('input','');input.placeholder='Agregar un autor';input.setAttribute('aria-label','Nombre del nuevo autor');input.maxLength=300;
- const button=el('button','Agregar autor');button.type='button';
- const add=()=>{const name=input.value.trim().replace(/\s+/g,' ');if(!name)return;db.authors=[...new Set([...(db.authors||[]),name])];record.author=name;dirty=true;show();};
- button.onclick=add;input.onkeydown=e=>{if(e.key==='Enter'&&input.value.trim()){e.preventDefault();e.stopPropagation();add();}};row.append(input,button);$('#fields').append(row);
-}
+function authorField(){termPicker('author',false);}
 function namesField(){
  const label=el('label','Nombres de las personas identificadas');const input=el('textarea','');input.value=(record.identifiedPeople||[]).join('\n');input.rows=4;input.placeholder='Un nombre por línea';input.oninput=()=>{record.identifiedPeople=[...new Set(input.value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean))];dirty=true;};
  label.append(input);$('#fields').append(label);

@@ -56,7 +56,7 @@ window.FieldDashboard=(()=>{
   $('#bulk-summary').textContent=list.length+' imágenes seleccionadas. Solo se modifica este conjunto; las demás se conservan.';
   const select=$('#bulk-value');select.replaceChildren(new Option('Elegí el nuevo valor…','__choose__'),new Option('Dejar vacío',''));
   if(field==='signature')for(const [value,label]of Object.entries(db.signatures||{}))select.add(new Option(label,value));
-  else for(const value of field==='author'?[...new Set([...(db.authors||[]),...Object.values(db.images).map(i=>i.record?.author).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'es')):RecordFields.definitions[field].options)select.add(new Option(value,value));
+  else for(const value of field==='author'?[...new Set([...GithubStore.vocabulary.authors,...(db.authors||[]),...Object.values(db.images).map(i=>i.record?.author).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'es')):RecordFields.definitions[field].options)select.add(new Option(value,value));
   select.value='__choose__';$('#bulk-preview').textContent='';$('#bulk-error').textContent='';$('#bulk-apply').disabled=true;$('#bulk-list').replaceChildren();
   for(const image of list){const row=el('div','');row.className='bulk-selected-image';if(image.media?.thumb){const thumb=new Image();thumb.src=GithubStore.url(image.media.thumb);thumb.alt='';thumb.loading='lazy';row.append(thumb);}row.append(el('span',image.relative+' · '+RecordFields.text(image,field,db)));$('#bulk-list').append(row);}
   $('#bulk-dialog').showModal();

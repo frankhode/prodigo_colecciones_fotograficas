@@ -17,7 +17,21 @@ const GithubStore=(()=>{
  async function jsonAt(path,ref){const result=await request('/contents/'+path+'?ref='+ref);if(!result.content)throw Error('El JSON supera el tamaño de lectura permitido por GitHub.');const bytes=Uint8Array.from(atob(result.content.replace(/\s/g,'')),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}
  async function publicJson(path){const r=await fetch(RAW+path+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('No se pudo leer el catálogo público.');return r.json();}
  async function list(){registry=token?await jsonAt('data/index.json',(await head()).sha):await publicJson('data/index.json');return registry;}
- async function open(id){if(writing)throw Error('Esperá a que termine el guardado.');const h=token?await head():null;registry=h?await jsonAt('data/index.json',h.sha):await publicJson('data/index.json');const meta=registry.collections.find(c=>c.id===id);if(!meta)throw Error('Colección inexistente.');const db=h?await jsonAt(meta.path,h.sha):await publicJson(meta.path);if(db.version!==meta.version)throw Error('GitHub está propagando el último guardado. Probá Actualizar en unos segundos.');collectionId=id;collectionName=meta.name;current=db;version=db.version;return clone(db);}
+ let vocabulary={authors:[],terms:{people:[],objects:[],highlights:[]}},vocabularyVersion='';
+ async function sharedVocabulary(index,ref){
+  const stamp=JSON.stringify(index.collections.map(c=>[c.id,c.version]));if(stamp===vocabularyVersion)return;
+  const sources=await Promise.all(index.collections.map(c=>{
+   if(!/^data\/collections\/[a-z0-9-]+\.json$/.test(c.path))throw Error('Ruta de colección inválida.');
+   return ref?jsonAt(c.path,ref):publicJson(c.path);
+  }));
+  const next={authors:[],terms:{people:[],objects:[],highlights:[]}};
+  for(const source of sources){next.authors.push(...(source.authors||[]));for(const key of Object.keys(next.terms))next.terms[key].push(...(source.terms?.[key]||[]));
+   for(const image of Object.values(source.images||{})){const r=image.record||{};if(r.author)next.authors.push(r.author);for(const key of Object.keys(next.terms))next.terms[key].push(...(r[key]||[]));}
+  }
+  const clean=list=>[...new Set(list.filter(v=>typeof v==='string'&&v.trim()).map(v=>v.trim()))].sort((a,b)=>a.localeCompare(b,'es'));
+  next.authors=clean(next.authors);for(const key of Object.keys(next.terms))next.terms[key]=clean(next.terms[key]);vocabulary=next;vocabularyVersion=stamp;
+ }
+ async function open(id){if(writing)throw Error('Esperá a que termine el guardado.');const h=token?await head():null;registry=h?await jsonAt('data/index.json',h.sha):await publicJson('data/index.json');const meta=registry.collections.find(c=>c.id===id);if(!meta)throw Error('Colección inexistente.');const db=h?await jsonAt(meta.path,h.sha):await publicJson(meta.path);if(db.version!==meta.version)throw Error('GitHub está propagando el último guardado. Probá Actualizar en unos segundos.');await sharedVocabulary(registry,h?.sha);collectionId=id;collectionName=meta.name;current=db;version=db.version;return clone(db);}
  async function connect(secret){token=secret.trim();try{const repo=await request('');if(repo.permissions&&repo.permissions.push===false)throw Error('Esta autorización no permite escribir en el repositorio.');await head();return true;}catch(e){token='';throw e;}}
  function disconnect(){token='';}
  function requireAuth(){if(!token)throw Error('Conectá GitHub para guardar en el repositorio.');}
@@ -85,7 +99,7 @@ const GithubStore=(()=>{
    if(!Array.isArray(input.targets)||!input.targets.length||input.targets.length>10000||new Set(input.targets.map(i=>i.id)).size!==input.targets.length)throw Error('Selección global inválida.');
    const definition=RecordFields.definitions[input.field];
    if(typeof input.value!=='string'||input.value&&definition.options&&!definition.options.includes(input.value))throw Error('Elegí un valor del listado.');
-   if(input.field==='author'&&input.value&&!(next.authors||[]).includes(input.value)&&!Object.values(next.images).some(i=>i.record?.author===input.value))throw Error('Elegí un autor de la colección.');
+   if(input.field==='author'&&input.value&&!(next.authors||[]).includes(input.value)&&!vocabulary.authors.includes(input.value)&&!Object.values(next.images).some(i=>i.record?.author===input.value))throw Error('Elegí un autor de la colección.');
    for(const target of input.targets){if(!next.images[target.id]||!RecordFields.applicable(next.images[target.id],input.field))throw Error('El campo no corresponde a una imagen seleccionada.');patchField(next,target.id,target.revision,input.field,input.value);}
    await commit(next);return {images:input.targets.map(i=>clone(current.images[i.id])),authors:clone(current.authors||[])};
   }
@@ -97,5 +111,5 @@ const GithubStore=(()=>{
   }
   throw Error('Operación desconocida.');
  }
- return {REPO,RAW,list,open,connect,disconnect,create,commit,imageEntries,url,mutate,requireAuth,get db(){return clone(current);},get id(){return collectionId;},get connected(){return !!token;},image(id){return clone(current?.images[id]||null);}};
+ return {get vocabulary(){return clone(vocabulary);},REPO,RAW,list,open,connect,disconnect,create,commit,imageEntries,url,mutate,requireAuth,get db(){return clone(current);},get id(){return collectionId;},get connected(){return !!token;},image(id){return clone(current?.images[id]||null);}};
 })();
