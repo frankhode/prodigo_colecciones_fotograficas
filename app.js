@@ -7,7 +7,7 @@ const gallery=$('gallery'),viewer=$('viewer'),big=$('big'),stage=$('stage');
 const esc=s=>String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 function matches(d,ignoreGroup=null){for(const [g,options] of Object.entries(groups)){if(g===ignoreGroup)continue;const active=options.map(x=>x[0]).filter(x=>chosen.has(x));if(active.length && !active.some(x=>g==='marca'?(Array.isArray(d.brand)?d.brand.includes(x):d.brand===x):d.tags.includes(x)))return false;}return yearMin===yearFloor&&yearMax===yearCeiling||d.year!==null&&d.year<=yearMax&&(d.yearTo??d.year)>=yearMin;}
 function render(){shown=data.filter(matches);gallery.innerHTML=shown.map((d,i)=>`<button class="tile" data-i="${i}" aria-label="Abrir fotografía ${esc(d.id)}"><img src="${esc(d.thumb)}" alt="Fotografía ${esc(d.id)}, ${esc(d.dateText||("c. "+d.year))}" loading="lazy" decoding="async" width="${d.w}" height="${d.h}"><span class="loupe"><span class="loupe-inner">⌕</span></span></button>`).join('');window.BixioImport?.bindGallery();$('counter').textContent=`${shown.length} FOTOGRAFÍAS`;$('empty').hidden=shown.length!==0;const isFiltered=chosen.size||yearMin!==yearFloor||yearMax!==yearCeiling;$('reset').hidden=!isFiltered;document.querySelectorAll('.filter-chip').forEach(b=>{if(b.dataset.group==='all')b.classList.toggle('selected',!isFiltered);else b.classList.toggle('has-selection',b.dataset.group==='fechas'?(yearMin!==yearFloor||yearMax!==yearCeiling):(groups[b.dataset.group]||[]).some(x=>chosen.has(x[0])))});updateFilterChips();if(panel&&panel!=='fechas')renderOptions();$('active').innerHTML=[...chosen].map(k=>`<button class="tag" data-tag="${esc(k)}">${esc(label[k])} ✕</button>`).join('')+((yearMin!==yearFloor||yearMax!==yearCeiling)?`<button class="tag" data-tag="fecha">${yearMin} — ${yearMax} ✕</button>`:'');}
-function reset(){chosen.clear();yearMin=yearFloor;yearMax=yearCeiling;panel=null;$('filter-panel').hidden=true;render()}
+function reset(){chosen.clear();yearMin=yearFloor;yearMax=yearCeiling;panel=null;$('filter-panel').hidden=true;closeFilters(false);render()}
 const groupNames={all:'Todas',autores:'Autores',identificados:'Personas identificadas',personas:'Personas',tipo:'Tipo de imagen',retrato:'Tipo de retrato',encuadre:'Encuadre',orientacion:'Orientación',color:'Color',ambiente:'Ambiente',objetos:'Objetos',destacados:'Destacados',composicion:'Composición',detalles:'Detalles',marca:'Firma del estudio',fechas:'Período'};
 const termMatch=(d,g,key)=>g==='marca'?(Array.isArray(d.brand)?d.brand.includes(key):d.brand===key):d.tags.includes(key);
 function facetCounts(g){const counts=new Map((groups[g]||[]).map(([key])=>[key,0]));let total=0;for(const d of data){if(!matches(d,g))continue;let found=false;for(const [key]of counts)if(termMatch(d,g,key)){counts.set(key,counts.get(key)+1);found=true;}if(found)total++;}return {counts,total};}
@@ -21,7 +21,7 @@ function renderOptions(){
  options.innerHTML=values.length?values.map(([key,text])=>`<button class="option ${chosen.has(key)?'on':''}" data-option="${esc(key)}" aria-pressed="${chosen.has(key)}"><span>${esc(text)}</span><span class="option-count" title="Fotografías que coinciden con los demás filtros">${counts.get(key)}</span></button>`).join(''):'<p class="facet-no-results">No hay opciones para esta búsqueda y selección.</p>';
 }
 function setPanel(g){
- const box=$('filter-panel');if(panel===g){panel=null;box.hidden=true;updateFilterChips();return;}panel=g;box.hidden=false;
+ const box=$('filter-panel');if(panel===g){showFilterCategories();return;}panel=g;box.hidden=false;$('filter-categories').hidden=true;$('filter-back').hidden=false;$('filter-menu-title').textContent=groupNames[g]||g;
  if(g==='fechas'){
   box.innerHTML=`<div class="year-panel"><strong id="yr-start">${yearMin}</strong><input id="range-start" aria-label="Desde el año" type="range" min="${yearFloor}" max="${yearCeiling}" value="${yearMin}"><span>—</span><input id="range-end" aria-label="Hasta el año" type="range" min="${yearFloor}" max="${yearCeiling}" value="${yearMax}"><strong id="yr-end">${yearMax}</strong></div>`;
   box.querySelector('#range-start').addEventListener('input',e=>{yearMin=Math.min(+e.target.value,yearMax);box.querySelector('#yr-start').textContent=yearMin;render()});box.querySelector('#range-end').addEventListener('input',e=>{yearMax=Math.max(+e.target.value,yearMin);box.querySelector('#yr-end').textContent=yearMax;render()});
@@ -31,6 +31,13 @@ function setPanel(g){
  }
  updateFilterChips();
 }
+function closeFilters(focus=true){$('filter-menu').hidden=true;$('filter-toggle').setAttribute('aria-expanded','false');if(focus)$('filter-toggle').focus();}
+function showFilterCategories(){panel=null;$('filter-panel').hidden=true;$('filter-categories').hidden=false;$('filter-back').hidden=true;$('filter-menu-title').textContent='Filtros';updateFilterChips();}
+$('filter-toggle').onclick=()=>{if(!$('filter-menu').hidden){closeFilters();return;}showFilterCategories();$('filter-menu').hidden=false;$('filter-toggle').setAttribute('aria-expanded','true');};
+$('filter-back').onclick=()=>{showFilterCategories();$('filters').querySelector('button:not([hidden])')?.focus();};
+$('filter-menu-close').onclick=()=>closeFilters();
+document.addEventListener('click',e=>{if(!$('filter-menu').hidden&&!$('filter-menu').contains(e.target)&&!$('filter-toggle').contains(e.target))closeFilters(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('filter-menu').hidden){closeFilters();e.preventDefault();}});
 $('filters').addEventListener('click',e=>{const b=e.target.closest('[data-group]');if(!b)return;if(b.dataset.group==='all')reset();else setPanel(b.dataset.group)});
 $('filter-panel').addEventListener('click',e=>{
  if(e.target.closest('[data-close-filter]')){setPanel(panel);return;}

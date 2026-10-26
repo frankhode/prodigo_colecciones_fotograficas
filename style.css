@@ -127,3 +127,29 @@ button:disabled{opacity:.3;cursor:default}
  .gallery[data-size="2"]{columns:2;column-gap:8px}
  .gallery[data-size="3"]{columns:1;column-gap:0}
 }
+
+/* Menú flotante sin desplazar la galería. */
+.filter-toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:20px;background:var(--paper);color:var(--ink);font:500 13px 'DM Sans',sans-serif;padding:9px 15px;white-space:nowrap}
+.filter-toggle[aria-expanded="true"]{background:var(--ink);color:var(--paper)}
+.filter-menu{position:absolute;top:68px;right:0;z-index:40;width:min(410px,100%);max-height:min(65dvh,600px);overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 45px #39251a30;padding:10px}
+.filter-menu-head{display:flex;align-items:center;gap:10px;padding:4px 4px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.filter-menu-head .facet-close{margin-left:auto;min-width:36px;min-height:36px}
+.filter-menu-head .facet-clear{margin-left:0;text-decoration:none}
+.filter-menu .filter-scroll{margin:6px 0 0;padding:0}
+.filter-menu .filter-bar{display:flex;flex-direction:column;gap:3px}
+.filter-menu .filter-chip{width:100%;display:flex;align-items:center;border:0;border-radius:6px;text-align:left;padding:10px 12px;min-height:42px}
+.filter-menu .filter-chip .facet-count{margin-left:auto}
+.filter-menu .filter-chip .down{transform:rotate(-90deg)}
+.filter-menu .filter-panel{padding:10px 3px 3px;margin:0;border:0;background:transparent;box-shadow:none;border-radius:0}
+.filter-menu .facet-toolbar{gap:6px;margin-bottom:8px}
+.filter-menu .facet-toolbar strong,.filter-menu [data-close-filter]{display:none}
+.filter-menu .facet-toolbar>span{font-size:11px}
+.filter-menu .facet-clear{font-size:11px}
+.filter-menu .filter-panel .options{display:flex;flex-direction:column;max-height:none;overflow:visible}
+.filter-menu .option{width:100%;min-height:42px}
+.filter-menu .year-panel{display:grid;grid-template-columns:auto 1fr;gap:14px 8px}
+.filter-menu .year-panel input{width:100%;min-width:0}
+.filter-menu .year-panel span{display:none}
+.filter-menu .year-panel strong{min-width:0}
+.active-tags:not(:empty){margin-top:12px}
+@media(max-width:600px){.right-tools{flex-wrap:wrap;justify-content:flex-end;gap:8px}.filter-menu{top:100%;max-height:65dvh;width:min(410px,100%)}.filter-menu .facet-toolbar>span{width:auto;order:0}}
