@@ -2,13 +2,13 @@
 // Lectura pública del repositorio del catalogador. No usa tokens.
 window.BixioRemote=(()=>{
  const ROOT='https://raw.githubusercontent.com/frankhode/prodigo-catalogador/main/';
- let current='all',lastVersion=null,reading=false,registry=null;
+ let current='all',lastVersion=null,reading=false,registry=null,retryTimer=null;
  const status=$('import-status'),select=$('live-collection');
  function safeMedia(path){return typeof path==='string'&&/^media\/[a-z0-9-]+\/[a-f0-9]+-[a-f0-9]+(?:-thumb)?\.(webp|jpg)$/.test(path)?ROOT+path:BixioFormat.blank;}
- async function json(path,key){const response=await fetch(ROOT+path+'?v='+encodeURIComponent(key),{cache:'no-store'});if(!response.ok)throw Error('No se pudo actualizar el catálogo online.');return response.json();}
+ async function json(path,key){const response=await fetch(ROOT+path+'?v='+encodeURIComponent(key)+'&fresh='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('No se pudo actualizar el catálogo online.');return response.json();}
  function options(index){const before=select.value;select.replaceChildren(new Option('Todas las colecciones','all'));for(const c of index.collections)select.add(new Option(c.name,c.id));select.value=current||before||'all';}
  async function update(force=false){
-  if(!current||reading)return;reading=true;const requested=current;
+  if(!current||reading)return;if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}reading=true;const requested=current;
   try{
    registry=await json('data/index.json',Date.now());if(current!==requested)return;options(registry);
    const selected=requested==='all'?registry.collections:registry.collections.filter(c=>c.id===requested);
@@ -18,7 +18,7 @@ window.BixioRemote=(()=>{
    const results=await Promise.all(selected.map(async meta=>{
     if(!/^data\/collections\/[a-z0-9-]+\.json$/.test(meta.path))throw Error('Ruta de colección inválida.');
     const source=await json(meta.path,meta.version);
-    if(source.version!==meta.version)throw Error('GitHub está propagando el último guardado.');
+    if(source.version!==meta.version){const error=Error('GitHub está propagando el último guardado. Se reintentará automáticamente.');error.retry=true;throw error;}
     const ready=Object.fromEntries(Object.entries(source.images).filter(([,image])=>image.status==='done'&&image.media?.src&&image.media?.thumb));
     const result=Object.keys(ready).length?BixioFormat.convert({...source,images:ready},source.images):{items:[],facets:{}};
     const key=id=>meta.id+'::'+id;
@@ -43,8 +43,8 @@ window.BixioRemote=(()=>{
    window.BixioImport?.deactivate();sourceVersion++;installCatalog(result.items,result.facets);
    if(previous){const index=shown.findIndex(i=>i.id===previous);if(index>=0)openViewer(index);else closeViewer();}
    $('collection-name-display').textContent=name;lastVersion=signature;
-   status.hidden=true;
-  }catch(e){status.hidden=false;status.textContent=e.message+' Se conserva la vista anterior.';}finally{reading=false;if(current&&current!==requested)queueMicrotask(()=>update(true));}
+   status.hidden=true;$('viewer-sync-status').hidden=true;
+  }catch(e){status.hidden=false;status.textContent=e.message+' Se conserva la vista anterior.';$('viewer-sync-status').textContent=status.textContent;$('viewer-sync-status').hidden=false;if(e.retry&&current===requested)retryTimer=setTimeout(()=>{retryTimer=null;update(true);},3000);}finally{reading=false;if(current&&current!==requested)queueMicrotask(()=>update(true));}
  }
  function stop(){current=null;lastVersion=null;select.value='local';}
  

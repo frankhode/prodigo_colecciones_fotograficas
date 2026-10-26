@@ -153,3 +153,5 @@ button:disabled{opacity:.3;cursor:default}
 .filter-menu .year-panel strong{min-width:0}
 .active-tags:not(:empty){margin-top:12px}
 @media(max-width:600px){.right-tools{flex-wrap:wrap;justify-content:flex-end;gap:8px}.filter-menu{top:100%;max-height:65dvh;width:min(410px,100%)}.filter-menu .facet-toolbar>span{width:auto;order:0}}
+
+#viewer-sync-status{margin:0;padding:8px 20px;color:#f4d6a7;background:#3c3024;font-size:12px;text-align:center;flex-shrink:0}
