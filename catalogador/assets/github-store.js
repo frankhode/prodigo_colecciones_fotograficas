@@ -15,14 +15,14 @@ const GithubStore=(()=>{
  }
  async function head(){const r=await request('/git/ref/heads/main');const commit=await request('/git/commits/'+r.object.sha);return {sha:r.object.sha,tree:commit.tree.sha};}
  async function jsonAt(path,ref){const result=await request('/contents/'+path+'?ref='+ref);if(!result.content)throw Error('El JSON supera el tamaño de lectura permitido por GitHub.');const bytes=Uint8Array.from(atob(result.content.replace(/\s/g,'')),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}
- async function publicJson(path){const r=await fetch(RAW+path+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('No se pudo leer el catálogo público.');return r.json();}
- async function list(){registry=token?await jsonAt('data/index.json',(await head()).sha):await publicJson('data/index.json');return registry;}
+ async function publicJson(path,ref='main'){const root=RAW.replace('/main/','/'+encodeURIComponent(ref)+'/');const r=await fetch(root+path+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('No se pudo leer el catálogo público.');return r.json();}
+ async function list(){const h=await head();registry=token?await jsonAt('data/index.json',h.sha):await publicJson('data/index.json',h.sha);return registry;}
  let vocabulary={authors:[],terms:{people:[],objects:[],highlights:[]}},vocabularyVersion='';
  async function sharedVocabulary(index,ref){
   const stamp=JSON.stringify(index.collections.map(c=>[c.id,c.version]));if(stamp===vocabularyVersion)return;
   const sources=await Promise.all(index.collections.map(c=>{
    if(!/^data\/collections\/[a-z0-9-]+\.json$/.test(c.path))throw Error('Ruta de colección inválida.');
-   return ref?jsonAt(c.path,ref):publicJson(c.path);
+   return token?jsonAt(c.path,ref):publicJson(c.path,ref);
   }));
   const next={authors:[],terms:{people:[],objects:[],highlights:[]}};
   for(const source of sources){next.authors.push(...(source.authors||[]));for(const key of Object.keys(next.terms))next.terms[key].push(...(source.terms?.[key]||[]));
@@ -31,7 +31,7 @@ const GithubStore=(()=>{
   const clean=list=>[...new Set(list.filter(v=>typeof v==='string'&&v.trim()).map(v=>v.trim()))].sort((a,b)=>a.localeCompare(b,'es'));
   next.authors=clean(next.authors);for(const key of Object.keys(next.terms))next.terms[key]=clean(next.terms[key]);vocabulary=next;vocabularyVersion=stamp;
  }
- async function open(id){if(writing)throw Error('Esperá a que termine el guardado.');const h=token?await head():null;registry=h?await jsonAt('data/index.json',h.sha):await publicJson('data/index.json');const meta=registry.collections.find(c=>c.id===id);if(!meta)throw Error('Colección inexistente.');const db=h?await jsonAt(meta.path,h.sha):await publicJson(meta.path);if(db.version!==meta.version)throw Error('GitHub está propagando el último guardado. Probá Actualizar en unos segundos.');await sharedVocabulary(registry,h?.sha);collectionId=id;collectionName=meta.name;current=db;version=db.version;return clone(db);}
+ async function open(id){if(writing)throw Error('Esperá a que termine el guardado.');const h=await head();registry=token?await jsonAt('data/index.json',h.sha):await publicJson('data/index.json',h.sha);const meta=registry.collections.find(c=>c.id===id);if(!meta)throw Error('Colección inexistente.');const db=token?await jsonAt(meta.path,h.sha):await publicJson(meta.path,h.sha);if(db.version!==meta.version)throw Error('GitHub está propagando el último guardado. Probá Actualizar en unos segundos.');await sharedVocabulary(registry,h?.sha);collectionId=id;collectionName=meta.name;current=db;version=db.version;return clone(db);}
  async function connect(secret){token=secret.trim();try{const repo=await request('');if(repo.permissions&&repo.permissions.push===false)throw Error('Esta autorización no permite escribir en el repositorio.');await head();return true;}catch(e){token='';throw e;}}
  function disconnect(){token='';}
  function requireAuth(){if(!token)throw Error('Conectá GitHub para guardar en el repositorio.');}
