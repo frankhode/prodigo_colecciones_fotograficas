@@ -14,3 +14,11 @@ value('yearMin=1905;yearMax=1910;render()');assert.equal(value('shown.length'),1
 value('reset()');assert.equal(value('shown.length'),4);assert.equal(value("facetCounts('color').counts.get('color-byn')"),2);
 const html=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');for(const group of ['destacados','objetos','color','tipo','retrato','encuadre','orientacion'])assert(html.includes('data-group="'+group+'"'));
 console.log('PASS: filtros completos, destacados separados de objetos, cantidades sin duplicados, conteos condicionados, OR/AND y períodos.');
+const authorChip=new E('authors');authorChip.dataset.group='autores';
+const allChip=new E('all');allChip.dataset.group='all';
+document.querySelectorAll=selector=>selector==='.filter-chip'?[authorChip,allChip]:[];
+value('updateFilterChips()');
+assert(authorChip.innerHTML.includes('>2</span>'));
+assert.equal(authorChip.title,'2 opciones');assert.equal(allChip.title,'4 fotografías');
+for(const size of ['0','1','2','3']){document.getElementById('density').value=size;document.getElementById('density').onchange();assert.equal(document.getElementById('gallery').dataset.size,size);}
+console.log('PASS: autores cuenta opciones, Todas cuenta fotos y se seleccionan cuatro tamaños.');
