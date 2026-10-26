@@ -1,4 +1,4 @@
-# Prodigo — Bixio · Demo
+# Pródigo — Colecciones fotográficas
 
 Galería fotográfica estática para GitHub Pages. No requiere backend, base de datos ni compilación.
 
@@ -17,3 +17,9 @@ El archivo `img102` se excluye al ser una digitalización de mayor resolución d
 ## Desarrollo
 
 Para probar localmente ejecutar `python -m http.server 8000` dentro de esta carpeta y abrir `http://localhost:8000`.
+
+## Varias colecciones
+
+La portada reúne todas las colecciones del registro `data/index.json` del repositorio de datos `frankhode/prodigo-catalogador`. El selector permite ver una sola. Los enlaces `?coleccion=<id>` abren una colección específica; `?demo=1` conserva la muestra histórica de Bixio. El catalogador permite crear colecciones independientes, cada una con sus fichas, firmas e imágenes.
+
+El código usa rutas relativas, por lo que admite renombrar este repositorio a `prodigo_colecciones_fotograficas`. El repositorio de datos no debe renombrarse: es independiente del nombre público del sitio. Tras renombrar, las direcciones serán `https://frankhode.github.io/prodigo_colecciones_fotograficas/` y su subcarpeta `catalogador/`. GitHub Pages no redirige automáticamente la dirección antigua.

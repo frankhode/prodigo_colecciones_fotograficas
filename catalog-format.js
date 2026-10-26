@@ -4,7 +4,7 @@ const BixioFormat=(()=>{
  const blank='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="500" height="650"><rect width="500" height="650" fill="#dfd4c6"/><text x="250" y="325" text-anchor="middle" fill="#705540" font-size="20">Vinculá la carpeta de imágenes</text></svg>');
  const slug=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-');
  function convert(source,links=source.images){
-  if(!source||typeof source!=='object'||!source.images||Array.isArray(source.images))throw Error('Elegí el JSON exportado desde el catalogador de Bixio.');
+  if(!source||typeof source!=='object'||!source.images||Array.isArray(source.images))throw Error('Elegí el JSON exportado desde el catalogador de colecciones fotográficas.');
   const all=Object.entries(source.images).map(([id,i])=>({...i,id,record:i.record&&!Array.isArray(i.record)?i.record:{}}));
   const included=all.filter(i=>i.status==='done');
   if(!included.length)throw Error('Este archivo todavía no contiene imágenes catalogadas. Guardá al menos una ficha como completa.');
