@@ -6,9 +6,9 @@ window.BixioRemote=(()=>{
  const status=$('import-status'),select=$('live-collection');
  function safeMedia(path){return typeof path==='string'&&/^media\/[a-z0-9-]+\/[a-f0-9]+-[a-f0-9]+(?:-thumb)?\.(webp|jpg)$/.test(path)?ROOT+path:BixioFormat.blank;}
  async function json(path,key){const response=await fetch(ROOT+path+'?v='+encodeURIComponent(key),{cache:'no-store'});if(!response.ok)throw Error('No se pudo actualizar el catálogo online.');return response.json();}
- function options(index){const before=select.value;select.replaceChildren(new Option('Todas las colecciones','all'),new Option('Muestra Bixio','demo'));for(const c of index.collections)select.add(new Option(c.name,c.id));select.add(new Option('Vista local','local'));select.value=current||before||'demo';}
+ function options(index){const before=select.value;select.replaceChildren(new Option('Todas las colecciones','all'));for(const c of index.collections)select.add(new Option(c.name,c.id));select.value=current||before||'all';}
  async function update(force=false){
-  if(!current||current==='demo'||reading)return;reading=true;const requested=current;
+  if(!current||reading)return;reading=true;const requested=current;
   try{
    registry=await json('data/index.json',Date.now());if(current!==requested)return;options(registry);
    const selected=requested==='all'?registry.collections:registry.collections.filter(c=>c.id===requested);
@@ -43,16 +43,14 @@ window.BixioRemote=(()=>{
    window.BixioImport?.deactivate();sourceVersion++;installCatalog(result.items,result.facets);
    if(previous){const index=shown.findIndex(i=>i.id===previous);if(index>=0)openViewer(index);else closeViewer();}
    $('collection-name-display').textContent=name;lastVersion=signature;
-   status.textContent=result.items.length?`${name} · ${result.items.length} fichas · actualización automática cada 30 s`:`${name} · todavía no hay fichas completas con imágenes publicadas.`;
-  }catch(e){status.textContent=e.message+' Se conserva la vista anterior.';}finally{reading=false;if(current&&current!=='demo'&&current!==requested)queueMicrotask(()=>update(true));}
+   status.hidden=true;
+  }catch(e){status.hidden=false;status.textContent=e.message+' Se conserva la vista anterior.';}finally{reading=false;if(current&&current!==requested)queueMicrotask(()=>update(true));}
  }
  function stop(){current=null;lastVersion=null;select.value='local';}
- select.add(new Option('Vista local','local'));
- select.onchange=()=>{if(select.value==='demo'){current='demo';location.href=location.pathname+'?demo=1';return;}if(select.value==='local'){stop();return;}current=select.value;lastVersion=null;update(true);};
- $('sync-now').onclick=()=>{if(current&&current!=='demo')update(true);};
+ 
+ select.onchange=()=>{current=select.value;lastVersion=null;update(true);};
  const params=new URLSearchParams(location.search);
- if(params.get('demo')==='1'){current='demo';json('data/index.json',Date.now()).then(options).catch(()=>{});}
- else{current=params.get('coleccion')||'all';update(true);}
+ current=params.get('coleccion')||'all';update(true);
  setInterval(()=>{if(!document.hidden)update();},30000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
  return {stop,update};
