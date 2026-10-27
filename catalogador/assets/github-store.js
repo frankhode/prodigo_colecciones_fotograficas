@@ -62,6 +62,7 @@ const GithubStore=(()=>{
  function patchField(next,id,revision,field,value){
    const definition=RecordFields.definitions[field];if(!definition)throw Error('Campo de revisión inválido.');
    const image=next.images[id];if(!image)throw Error('Imagen inexistente.');if((image.revision||0)!==revision)throw Error('El registro cambió. Recargá la colección.');
+   if(!RecordFields.applicable(image,field))throw Error('Este campo solo corresponde a los frentes.');
    const delta={[field]:clone(value)};
    if(definition.type==='tags'&&(!Array.isArray(delta[field])||delta[field].some(v=>typeof v!=='string')))throw Error('Elegí términos válidos.');
    if(!['tags','names'].includes(definition.type)&&typeof delta[field]!=='string')throw Error('Valor de campo inválido.');

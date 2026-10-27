@@ -29,7 +29,8 @@ const RecordFields=(()=>{
  if(typeof module!=='undefined'&&module.exports)configure(require('../options.json'));
  const has=value=>Array.isArray(value)?value.some(v=>String(v).trim()):value!==undefined&&value!==null&&String(value).trim()!=='';
  const value=(image,key)=>image.record?.[key];
- const applicable=(image,key)=>!definitions[key]?.portraitOnly||image.record?.kind==='Retrato';
+ const partFields=new Set(['side','parent','displayOrder','notes']);
+ const applicable=(image,key)=>partFields.has(key)||image.record?.side==='Frente'&&(!definitions[key]?.portraitOnly||image.record?.kind==='Retrato');
  function text(image,key,db){const v=value(image,key);if(!has(v))return 'Sin dato';if(key==='parent')return db.images?.[v]?.relative||v;if(key==='signature')return db.signatures?.[v]||v;return Array.isArray(v)?v.join(' · '):String(v);}
  function stats(images,key){const list=images.filter(i=>applicable(i,key));return {total:list.length,filled:list.filter(i=>has(value(i,key))).length,reviewed:list.filter(i=>i.fieldReviews?.[key]).length};}
  function candidates(images,key,scope){return images.filter(i=>applicable(i,key)&&(scope==='all'||scope==='filled'&&has(value(i,key))||scope==='unreviewed'&&!i.fieldReviews?.[key]||scope==='missing'&&!has(value(i,key))&&!i.fieldReviews?.[key]));}
