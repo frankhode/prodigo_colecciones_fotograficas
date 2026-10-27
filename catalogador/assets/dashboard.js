@@ -18,7 +18,7 @@ window.FieldDashboard=(()=>{
   const list=items(),count=list.filter(i=>selected.has(i.id)).length;
   for(const [id,{checkbox,card}]of checks){checkbox.checked=selected.has(id);checkbox.disabled=busy;card.classList.toggle('selected',checkbox.checked);}
   $('#selection-count').textContent=count+' de '+list.length+' seleccionadas';
-  $('#bulk-open').disabled=!count||busy;$('#start-review').disabled=!list.length||busy;
+  $('#membership-selected').disabled=!count||busy;$('#membership-selected').textContent=$('#status').value==='withdrawn'?'Reincorporar seleccionadas':'Retirar seleccionadas';$('#bulk-open').disabled=!count||busy;$('#start-review').disabled=!list.length||busy;
   $('#start-review').textContent=count?'Recorrer '+count+' seleccionadas →':'Empezar recorrido →';
   for(const id of ['select-all','select-none','select-invert'])$('#'+id).disabled=!list.length||busy;
  }
@@ -43,6 +43,7 @@ window.FieldDashboard=(()=>{
   if(!list.length)$('#review-list').append(el('p','No hay imágenes para este campo y filtro.'));
   updateSelection();
  }
+ $('#membership-selected').onclick=async()=>{const targets=items().filter(i=>selected.has(i.id));if(targets.length&&await changeMembership(targets,$('#status').value!=='withdrawn')){selected.clear();render();}};
  $('#select-all').onclick=()=>{if(busy)return;for(const image of items())selected.add(image.id);updateSelection();};
  $('#select-none').onclick=()=>{if(busy)return;selected.clear();updateSelection();};
  $('#select-invert').onclick=()=>{if(busy)return;for(const image of items()){if(selected.has(image.id))selected.delete(image.id);else selected.add(image.id);}updateSelection();};

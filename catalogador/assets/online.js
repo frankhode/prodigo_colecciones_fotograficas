@@ -44,7 +44,7 @@ $('#json-file').onchange=async e=>{const file=e.target.files[0];e.target.value='
   const id=/^[a-f0-9]{64}$/.test(oldId)?oldId:await OnlineImages.hash(oldId);
   if(next.images[id])continue;
   const oldFolder=source.folders?.[image.folder],name=oldFolder?.name||String(oldFolder?.path||'Imágenes').split(/[\\/]/).pop(),folder=await OnlineImages.hash(name);next.folders[folder]={name,path:name};
-  next.images[id]={id,relative:image.relative,folder,status:['done','draft','pending'].includes(image.status)?image.status:'pending',record:{...image.record},fieldReviews:{...(image.fieldReviews||{})},revision:0};added++;
+  next.images[id]={id,relative:image.relative,folder,excluded:!!image.excluded,status:['done','draft','pending'].includes(image.status)?image.status:'pending',record:{...image.record},fieldReviews:{...(image.fieldReviews||{})},revision:0};added++;
  }
  // Reasignar vínculos si el respaldo usa identificadores cortos.
  for(const image of Object.values(next.images))if(image.record.parent&&!/^[a-f0-9]{64}$/.test(image.record.parent))image.record.parent=await OnlineImages.hash(image.record.parent);

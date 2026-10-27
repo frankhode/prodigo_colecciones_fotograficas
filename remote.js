@@ -19,7 +19,7 @@ window.BixioRemote=(()=>{
     if(!/^data\/collections\/[a-z0-9-]+\.json$/.test(meta.path))throw Error('Ruta de colección inválida.');
     const source=await json(meta.path,meta.version);
     if(source.version!==meta.version){const error=Error('GitHub está propagando el último guardado. Se reintentará automáticamente.');error.retry=true;throw error;}
-    const ready=Object.fromEntries(Object.entries(source.images).filter(([,image])=>image.status==='done'&&image.media?.src&&image.media?.thumb));
+    const ready=Object.fromEntries(Object.entries(source.images).filter(([,image])=>!image.excluded&&image.status==='done'&&image.media?.src&&image.media?.thumb));
     const result=Object.keys(ready).length?BixioFormat.convert({...source,images:ready},source.images):{items:[],facets:{}};
     const key=id=>meta.id+'::'+id;
     // Las firmas son autoridades de cada colección; sus códigos pueden repetirse.

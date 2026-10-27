@@ -6,7 +6,7 @@ const BixioFormat=(()=>{
  function convert(source,links=source.images){
   if(!source||typeof source!=='object'||!source.images||Array.isArray(source.images))throw Error('Elegí el JSON exportado desde el catalogador de colecciones fotográficas.');
   const all=Object.entries(source.images).map(([id,i])=>({...i,id,record:i.record&&!Array.isArray(i.record)?i.record:{}}));
-  const included=all.filter(i=>i.status==='done');
+  const included=all.filter(i=>!i.excluded&&i.status==='done');
   if(!included.length)throw Error('Este archivo todavía no contiene imágenes catalogadas. Guardá al menos una ficha como completa.');
   const ids=new Set(included.map(i=>i.id)),facets={personas:[],tipo:[],retrato:[],encuadre:[],orientacion:[],color:[],objetos:[],destacados:[],composicion:[],ambiente:[],detalles:[],marca:[],autores:[],identificados:[]};
   const add=(group,key,text)=>{if(!facets[group].some(x=>x[0]===key))facets[group].push([key,text]);return key;};

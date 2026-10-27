@@ -42,7 +42,7 @@ const GithubStore=(()=>{
    if(newCollection&&meta)throw Error('Ya existe una colección con ese identificador.');
    if(!newCollection&&(!meta||meta.version!==version))throw Error('La colección fue modificada desde otra ventana. Exportá tu respaldo y recargá antes de guardar.');
    const next=clone(db),nextVersion=crypto.randomUUID();next.version=nextVersion;next.updated=new Date().toISOString();
-   const nextMeta={id:collectionId,name:collectionName,path:'data/collections/'+collectionId+'.json',version:nextVersion,updated:next.updated,total:Object.keys(next.images).length,done:Object.values(next.images).filter(i=>i.status==='done').length};
+   const nextMeta={id:collectionId,name:collectionName,path:'data/collections/'+collectionId+'.json',version:nextVersion,updated:next.updated,total:Object.keys(next.images).length,done:Object.values(next.images).filter(i=>!i.excluded&&i.status==='done').length};
    const updated={...remote,updated:next.updated,collections:[...remote.collections.filter(c=>c.id!==collectionId),nextMeta]};
    const tree=await request('/git/trees',{method:'POST',body:{base_tree:h.tree,tree:[...extra,{path:nextMeta.path,mode:'100644',type:'blob',content:JSON.stringify(next,null,2)},{path:'data/index.json',mode:'100644',type:'blob',content:JSON.stringify(updated,null,2)}]}});
    const c=await request('/git/commits',{method:'POST',body:{message:'Catalogar '+collectionName,tree:tree.sha,parents:[h.sha]}});
@@ -78,6 +78,12 @@ const GithubStore=(()=>{
  async function mutate(action,input){
   if(action==='state')return {db:clone(current),token:''};
   requireAuth();const next=clone(current);
+  if(action==='membership'){
+   if(!Array.isArray(input.targets)||!input.targets.length||typeof input.excluded!=='boolean')throw Error('Selección inválida.');
+   for(const target of input.targets){const image=next.images[target.id];if(!image||(image.revision||0)!==target.revision)throw Error('Una ficha cambió. Recargá antes de continuar.');}
+   for(const target of input.targets){const image=next.images[target.id];image.excluded=input.excluded;image.revision=(image.revision||0)+1;image.updated=new Date().toISOString();}
+   await commit(next);return {images:input.targets.map(t=>clone(current.images[t.id]))};
+  }
   if(action==='save'){
    const image=next.images[input.id];if(!image)throw Error('Imagen inexistente.');if((image.revision||0)!==input.revision)throw Error('El registro cambió. Recargá la colección.');
    const record=RecordFields.normalize(clone({...input.record}));RecordFields.validateOptions(record,image.record);if(!record.side)throw Error('Elegí la parte del documento.');
